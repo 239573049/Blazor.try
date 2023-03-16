@@ -12,46 +12,55 @@
         <MAvatar Tile Style="margin: 5px">
             <MImage Src="https://blog-simple.oss-cn-shenzhen.aliyuncs.com/20220127114400.png" Alt="Jack"></MImage>
         </MAvatar>
-        <MButton
-            Text
-            Dark
-            OnClick="RunCode"
-            Color="primary">
-            <MIcon>
+        <MButton Text
+                 Dark
+                 Style="min-width:0px"
+                 OnClick="RunCode"
+                 Color="primary">
+            <MIcon Color="#FFFFFF">
                 fas fa-duotone fa-play
             </MIcon>
         </MButton>
         <PModal @bind-Value="createPModal" Title="新增文件" Width="500">
             <ActivatorContent>
-                <MButton
-                    @attributes="@context.Attrs"
-                    Text
-                    Dark
-                    Color="primary">
-                    <MIcon>
+                <MButton @attributes="@context.Attrs"
+                         Text
+                         Style="min-width:0px"
+                         Dark
+                         Color="primary">
+                    <MIcon Color="#FFFFFF">
                         fas fa-sharp fa-solid fa-plus
                     </MIcon>
                 </MButton>
-
             </ActivatorContent>
             <ChildContent>
-                <MTextField
-                    @bind-Value="CreateMona.Name"
-                    Solo
-                    Label="文件名称">
+                <MTextField @bind-Value="CreateMona.Name"
+                            Solo
+                            Label="文件名称">
                 </MTextField>
                 <MDivider></MDivider>
                 <MButton Block OnClick="CreateFile">新增</MButton>
             </ChildContent>
         </PModal>
+
+        <MButton
+            Style="min-width:0px"
+            Text
+            Href="@GitHub"
+            Link
+            Dark>
+            <MIcon Color="#FFFFFF">
+                mdi-github
+            </MIcon>
+        </MButton>
     </MNavigationDrawer>
 
     <MMain>
         <div id="code">
-            <MTabs @bind-Value="TabStringNumber">
+            <MTabs Style="height: 35px;" @bind-Value="TabStringNumber">
                 @foreach (var item in TabMonacoList)
                 {
-                    <MTab>
+                    <MTab Style="height: 30px;" Class="text-lowercase">
                         @item.Name
                         <MButton Icon Text OnClick="() => Close(item)">
                             <MIcon>mdi-close</MIcon>
@@ -63,7 +72,7 @@
                 @foreach (var item in TabMonacoList)
                 {
                     <MTabItem Style="height: 100%;">
-                        <MMonacoEditor InitCompleteHandle="async () => await InitMonaco(item)" Style="height:95%" EditorOptions="Options" @ref="item.MonacoEditor"></MMonacoEditor>
+                        <MMonacoEditor InitCompleteHandle="async () => await InitMonaco(item)" Style="height:95%" EditorOptions="@item.Options" @ref="item.MonacoEditor"></MMonacoEditor>
                     </MTabItem>
                 }
             </MTabsItems>
@@ -81,40 +90,47 @@
         </div>
     </MMain>
     <MOverlay Value="load">
-        <MProgressLinear Color="deep-purple accent-4"
-                         Indeterminate
-                         Rounded
-                         Height="6">
-                         加载
-        </MProgressLinear>
+        <MProgressCircular Size="80" Width="8" Indeterminate Color="purple"></MProgressCircular>
     </MOverlay>
     <PEnqueuedSnackbars @ref="_enqueuedSnackbars"></PEnqueuedSnackbars>
 </MApp>
 
 <style>
-      #code {
-        width: 50%;
-        height: 100%;
-        float: left;
-      }
+#code {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
 
-      #render {
-        width: 49%;
-        height: 100%;
-        float: right;
-      }
+#render {
+    width: 49%;
+    height: 100%;
+    float: right;
+}
 
-      #splitter {
-        width: 10px;
-        height: 100%;
-        float: left;
-        cursor: col-resize;
-        background-color: #999999;
-      }
-      html{
-        overflow: hidden;
-      }
+#splitter {
+    width: 10px;
+    height: 100%;
+    float: left;
+    cursor: col-resize;
+    background-color: #999999;
+}
+html {
+    overflow: hidden;
+}
+
 	.m-progress-circular {
       margin: 1rem;
     }
+    
+.m-slide-item--active {
+    font-size: 10px;
+}
+
+.m-tabs-bar__content{
+    height:35px;
+}
+.m-progress-circular {
+    margin: 1rem;
+}
 </style>

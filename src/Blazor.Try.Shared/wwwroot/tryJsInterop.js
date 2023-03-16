@@ -49,7 +49,27 @@ function init() {
     splitter.addEventListener('mousedown', mouseDownHandler);
 }
 
+function setStorage(key,value) {
+    window.localStorage.setItem(key,value);
+}
+
+function getStorage(key) {
+    return window.localStorage.getItem(key);
+}
+
+function delStorage(key) {
+    window.localStorage.removeItem(key);
+}
+
+function clearStorage() {
+    window.localStorage.clear();
+}
+
 export {
     addCommand,
-    init
+    init,
+    setStorage,
+    getStorage,
+    delStorage,
+    clearStorage
 }

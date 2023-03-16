@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Loader;
+using System.Text.Json;
 using Blazor.Try.Shared.Modules;
 using BlazorComponent;
 using Masa.Blazor.Extensions.Languages.Razor;
@@ -9,31 +10,57 @@ using Microsoft.JSInterop;
 
 namespace Blazor.Try.Shared.Pages;
 
-public partial class Home
+public partial class Home : IAsyncDisposable
 {
-
     private Type? componentType;
 
     private bool load;
 
-    private string url = "https://github.com/BlazorComponent/Masa.Blazor";
+    private string GitHub = "https://github.com/239573049/Blazor.try";
 
-    private static string Code = @"<body>
-    <div id='app'>
-        <header>
-            <h1>Doctor Who&trade; Episode Database</h1>
-        </header>
+    private static string Code = """
+<MCard
+    Class="overflow-hidden mx-auto"
+    Height="200"
+    MaxWidth="500">
+    <MBottomNavigation
+        Absolute
+        HideOnScroll
+        Horizontal
+        ScrollTarget="#hide-on-scroll-example">
+        <MButton
+            Color="deep-purple accent-4"
+            Text>
+            <span>Recents</span>
 
-        <nav>
-            <a href='main-list'>Main Episode List</a>
-            <a href='search'>Search</a>
-            <a href='new'>Add Episode</a>
-        </nav>
+            <MIcon>mdi-history</MIcon>
+        </MButton>
 
-        <h2>Episodes</h2>
+        <MButton
+            Color="deep-purple accent-4"
+            Text>
+            <span>Favorites</span>
 
-    </div>
-</body>";
+            <MIcon>mdi-heart</MIcon>
+        </MButton>
+
+        <MButton
+            Color="deep-purple accent-4"
+            Text>
+            <span>Nearby</span>
+
+            <MIcon>mdi-map-marker</MIcon>
+        </MButton>
+    </MBottomNavigation>
+
+    <MResponsive
+        Id="hide-on-scroll-example"
+        Class="overflow-y-auto"
+        MaxHeight="600">
+        <MResponsive Height="1500"></MResponsive>
+    </MResponsive>
+</MCard>
+""";
 
     /// <summary>
     /// 编译器需要使用的程序集
@@ -57,6 +84,10 @@ public partial class Home
         "System.Runtime"
     };
 
+    private static List<PortableExecutableReference>? PortableExecutableReferences;
+
+    private static List<RazorExtension>? RazorExtensions;
+
     public List<TabMonacoModule> TabMonacoList { get; set; } = new();
 
     public StringNumber TabStringNumber { get; set; }
@@ -70,14 +101,6 @@ public partial class Home
     private bool initialize = false;
 
     private bool drawer = true;
-
-    private object Options = new
-    {
-        value = Code,
-        language = "razor",
-        theme = "vs-dark",
-        automaticLayout = true,
-    };
 
     private DotNetObjectReference<Home> _objRef;
 
@@ -93,13 +116,25 @@ public partial class Home
         StateHasChanged();
         await Task.Delay(10);
 
-        var _monaco = TabMonacoList[(int)TabStringNumber];
-
+        // 得到当前编辑器的代码
+        var code = await TabMonacoList[(int)TabStringNumber].MonacoEditor.GetValue();
+        
+        // 更新当前编辑器的代码
+        TabMonacoList[(int)TabStringNumber].Options = new
+        {
+            value = code,
+            language = "razor",
+            theme = "vs-dark",
+            automaticLayout = true,
+        };
+        
         var options = new CompileRazorOptions()
         {
-            Code = await _monaco.MonacoEditor.GetValue(),
+            Code = code,
             ConcurrentBuild = true
         };
+        
+        await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
 
         componentType = RazorCompile.CompileToType(options);
         load = false;
@@ -117,12 +152,13 @@ public partial class Home
             });
             return;
         }
+
         tabMonacoModule.MonacoEditor.Dispose();
         TabMonacoList.Remove(tabMonacoModule);
         TabStringNumber = 0;
     }
 
-    private void CreateFile()
+    private async Task CreateFile()
     {
         createPModal = false;
         if (TabMonacoList.Any(x => x.Name == CreateMona.Name))
@@ -135,17 +171,26 @@ public partial class Home
             });
             return;
         }
+
         TabMonacoList.Add(new TabMonacoModule()
         {
-            Name = CreateMona.Name
+            Name = CreateMona.Name,
+            Options = new
+            {
+                value = Code,
+                language = "razor",
+                theme = "vs-dark",
+                automaticLayout = true,
+            }
         });
 
+        await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
+        
         CreateMona = new TabMonacoModule();
     }
 
     protected override async Task OnInitializedAsync()
     {
-
         _objRef = DotNetObjectReference.Create(this);
 
         RazorCompile.Initialized(await GetReference(), GetRazorExtension());
@@ -157,13 +202,33 @@ public partial class Home
     {
         if (firstRender)
         {
-            TabMonacoList.Add(new TabMonacoModule()
+            var value = JsonSerializer.Deserialize<List<TabMonacoModule>>(await TryJsInterop.GetStorage("code") ??
+                                                                          "[]");
+
+            if (value == null || value.Count == 0)
             {
-                Name = "Masa.razor"
-            });
+                TabMonacoList.Add(new TabMonacoModule()
+                {
+                    Name = "masa.razor",
+                    Options = new
+                    {
+                        value = Code,
+                        language = "razor",
+                        theme = "vs-dark",
+                        automaticLayout = true,
+                    }
+                });   
+                
+                await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
+            }
+            else
+            {
+                TabMonacoList = value;
+            }
 
             await TryJsInterop.Init();
         }
+
         await base.OnAfterRenderAsync(firstRender);
     }
 
@@ -173,63 +238,67 @@ public partial class Home
         await TryJsInterop.AddCommand(tabMonacoModule.MonacoEditor.Monaco, 2097, _objRef, nameof(RunCode));
     }
 
-    async Task<List<PortableExecutableReference>?> GetReference()
+    private async Task<List<PortableExecutableReference>?> GetReference()
     {
-        var portableExecutableReferences = new List<PortableExecutableReference>();
-        if (BlazorTryExtension.WebAssembly)
+        if (PortableExecutableReferences == null)
         {
-
-            foreach (var asm in Assemblys)
+            PortableExecutableReferences = new List<PortableExecutableReference>();
+            if (BlazorTryExtension.WebAssembly)
             {
-                try
+                foreach (var asm in Assemblys)
                 {
-                    await using var stream = await HttpClient!.GetStreamAsync($"_framework/{asm}.dll");
-                    if (stream.Length > 0)
+                    try
                     {
-                        portableExecutableReferences?.Add(MetadataReference.CreateFromStream(stream));
+                        await using var stream = await HttpClient!.GetStreamAsync($"_framework/{asm}.dll");
+                        if (stream.Length > 0)
+                        {
+                            PortableExecutableReferences?.Add(MetadataReference.CreateFromStream(stream));
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
             }
-        }
-        else
-        {
-            foreach (var asm in AssemblyLoadContext.Default.Assemblies)
+            else
             {
-                try
+                foreach (var asm in AssemblyLoadContext.Default.Assemblies)
                 {
-                    portableExecutableReferences?.Add(MetadataReference.CreateFromFile(asm.Location));
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
+                    try
+                    {
+                        PortableExecutableReferences?.Add(MetadataReference.CreateFromFile(asm.Location));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
             }
         }
 
         initialize = true;
 
-        return portableExecutableReferences;
+        return PortableExecutableReferences;
     }
 
-    List<RazorExtension> GetRazorExtension()
+    private List<RazorExtension> GetRazorExtension()
     {
-        var razorExtension = new List<RazorExtension>();
-
-        foreach (var asm in typeof(Index).Assembly.GetReferencedAssemblies())
+        if (RazorExtensions == null)
         {
-            razorExtension.Add(new AssemblyExtension(asm.FullName, AppDomain.CurrentDomain.Load(asm.FullName)));
+            RazorExtensions = new List<RazorExtension>();
+
+            foreach (var asm in typeof(Index).Assembly.GetReferencedAssemblies())
+            {
+                RazorExtensions.Add(new AssemblyExtension(asm.FullName, AppDomain.CurrentDomain.Load(asm.FullName)));
+            }
         }
 
-        return razorExtension;
+        return RazorExtensions;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _objRef.Dispose();
     }
-
 }
