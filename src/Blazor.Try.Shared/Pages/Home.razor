@@ -1,7 +1,120 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components
 
-<h3>Home</h3>
+@inject HttpClient HttpClient
+@inject TryJsInterop TryJsInterop
+<MApp Id="inspire">
+    <MNavigationDrawer @bind-Value="drawer"
+                       App
+                       Dark
+                       Color="#005CAF"
+                       MiniVariant>
+        <MAvatar Tile Style="margin: 5px">
+            <MImage Src="https://blog-simple.oss-cn-shenzhen.aliyuncs.com/20220127114400.png" Alt="Jack"></MImage>
+        </MAvatar>
+        <MButton
+            Text
+            Dark
+            OnClick="RunCode"
+            Color="primary">
+            <MIcon>
+                fas fa-duotone fa-play
+            </MIcon>
+        </MButton>
+        <PModal @bind-Value="createPModal" Title="新增文件" Width="500">
+            <ActivatorContent>
+                <MButton
+                    @attributes="@context.Attrs"
+                    Text
+                    Dark
+                    Color="primary">
+                    <MIcon>
+                        fas fa-sharp fa-solid fa-plus
+                    </MIcon>
+                </MButton>
 
-@code {
+            </ActivatorContent>
+            <ChildContent>
+                <MTextField
+                    @bind-Value="CreateMona.Name"
+                    Solo
+                    Label="文件名称">
+                </MTextField>
+                <MDivider></MDivider>
+                <MButton Block OnClick="CreateFile">新增</MButton>
+            </ChildContent>
+        </PModal>
+    </MNavigationDrawer>
 
-}
+    <MMain>
+        <div id="code">
+            <MTabs @bind-Value="TabStringNumber">
+                @foreach (var item in TabMonacoList)
+                {
+                    <MTab>
+                        @item.Name
+                        <MButton Icon Text OnClick="() => Close(item)">
+                            <MIcon>mdi-close</MIcon>
+                        </MButton>
+                    </MTab>
+                }
+            </MTabs>
+            <MTabsItems Style="height: 100%;" Value="TabStringNumber">
+                @foreach (var item in TabMonacoList)
+                {
+                    <MTabItem Style="height: 100%;">
+                        <MMonacoEditor InitCompleteHandle="async () => await InitMonaco(item)" Style="height:95%" EditorOptions="Options" @ref="item.MonacoEditor"></MMonacoEditor>
+                    </MTabItem>
+                }
+            </MTabsItems>
+        </div>
+        <div id="splitter"></div>
+        <div id="render">
+            @if (componentType != null)
+            {
+                <DynamicComponent Type="@componentType"/>
+            }
+            else
+            {
+                <h1>渲染区块</h1>
+            }
+        </div>
+    </MMain>
+    <MOverlay Value="load">
+        <MProgressLinear Color="deep-purple accent-4"
+                         Indeterminate
+                         Rounded
+                         Height="6">
+                         加载
+        </MProgressLinear>
+    </MOverlay>
+    <PEnqueuedSnackbars @ref="_enqueuedSnackbars"></PEnqueuedSnackbars>
+</MApp>
+
+<style>
+      #code {
+        width: 50%;
+        height: 100%;
+        float: left;
+      }
+
+      #render {
+        width: 49%;
+        height: 100%;
+        float: right;
+      }
+
+      #splitter {
+        width: 10px;
+        height: 100%;
+        float: left;
+        cursor: col-resize;
+        background-color: #999999;
+      }
+      html{
+        overflow: hidden;
+      }
+	.m-progress-circular {
+      margin: 1rem;
+    }
+</style>

@@ -14,12 +14,18 @@
   <ItemGroup>
     <PackageReference Include="Masa.Blazor" Version="1.0.0-preview.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.3" />
+    <PackageReference Include="Semi.Design.Blazor.Monaco.Editor" Version="0.0.10" />
+    <PackageReference Include="Masa.Blazor.Extensions.Languages.Razor" Version="0.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Update="_Imports.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Modules\" />
   </ItemGroup>
 
 </Project>

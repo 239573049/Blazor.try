@@ -9,4 +9,13 @@ public class TryJsInterop : JSModule
     {
     }
     
+    public async ValueTask Init()
+    {
+        await InvokeVoidAsync("init");
+    }
+
+    public async ValueTask AddCommand<T>(IJSObjectReference id, int keybinding, DotNetObjectReference<T> dotNetObjectReference, string method) where T : class
+    {
+        await InvokeVoidAsync("addCommand", id, keybinding, dotNetObjectReference, method);
+    }
 }
