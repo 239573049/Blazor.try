@@ -1,5 +1,6 @@
 using BlazorComponent.JSInterop;
 using Microsoft.JSInterop;
+using System.Text;
 
 namespace Blazor.Try.Shared;
 

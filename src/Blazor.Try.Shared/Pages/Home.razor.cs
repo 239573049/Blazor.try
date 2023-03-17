@@ -1,4 +1,5 @@
-﻿using System.Runtime.Loader;
+﻿using System.IO;
+using System.Runtime.Loader;
 using System.Text.Json;
 using Blazor.Try.Shared.Modules;
 using BlazorComponent;
@@ -118,7 +119,7 @@ public partial class Home : IAsyncDisposable
 
         // 得到当前编辑器的代码
         var code = await TabMonacoList[(int)TabStringNumber].MonacoEditor.GetValue();
-        
+
         // 更新当前编辑器的代码
         TabMonacoList[(int)TabStringNumber].Options = new
         {
@@ -127,13 +128,13 @@ public partial class Home : IAsyncDisposable
             theme = "vs-dark",
             automaticLayout = true,
         };
-        
+
         var options = new CompileRazorOptions()
         {
             Code = code,
             ConcurrentBuild = true
         };
-        
+
         await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
 
         componentType = RazorCompile.CompileToType(options);
@@ -185,15 +186,13 @@ public partial class Home : IAsyncDisposable
         });
 
         await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
-        
+
         CreateMona = new TabMonacoModule();
     }
 
     protected override async Task OnInitializedAsync()
     {
         _objRef = DotNetObjectReference.Create(this);
-
-        RazorCompile.Initialized(await GetReference(), GetRazorExtension());
 
         await base.OnInitializedAsync();
     }
@@ -202,9 +201,10 @@ public partial class Home : IAsyncDisposable
     {
         if (firstRender)
         {
-            var value = JsonSerializer.Deserialize<List<TabMonacoModule>>(await TryJsInterop.GetStorage("code") ??
-                                                                          "[]");
-
+            load = true;
+            RazorCompile.Initialized(await GetReference(), GetRazorExtension());
+            load = false;
+            var value = JsonSerializer.Deserialize<List<TabMonacoModule>>(await TryJsInterop.GetStorage("code") ??"[]");
             if (value == null || value.Count == 0)
             {
                 TabMonacoList.Add(new TabMonacoModule()
@@ -217,8 +217,8 @@ public partial class Home : IAsyncDisposable
                         theme = "vs-dark",
                         automaticLayout = true,
                     }
-                });   
-                
+                });
+
                 await TryJsInterop.SetStorage("code", JsonSerializer.Serialize(TabMonacoList));
             }
             else
@@ -227,6 +227,9 @@ public partial class Home : IAsyncDisposable
             }
 
             await TryJsInterop.Init();
+
+            StateHasChanged();
+
         }
 
         await base.OnAfterRenderAsync(firstRender);
@@ -240,6 +243,7 @@ public partial class Home : IAsyncDisposable
 
     private async Task<List<PortableExecutableReference>?> GetReference()
     {
+
         if (PortableExecutableReferences == null)
         {
             PortableExecutableReferences = new List<PortableExecutableReference>();
@@ -250,6 +254,7 @@ public partial class Home : IAsyncDisposable
                     try
                     {
                         await using var stream = await HttpClient!.GetStreamAsync($"_framework/{asm}.dll");
+
                         if (stream.Length > 0)
                         {
                             PortableExecutableReferences?.Add(MetadataReference.CreateFromStream(stream));
